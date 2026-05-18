@@ -58,6 +58,8 @@ inventory:
 * Updated pci.ids to 2026.06.21 version
 * Updated usb.ids to 2026.06.10 version
 * Bump Inventory task version to 1.25
+* Add DRIVES support for Hyper-V VMs: collect virtual hard disk paths and
+  provisioned sizes via MSVM_StorageAllocationSettingData WMI class
 
 netdiscovery/netinventory:
 * fix #1161: Add support for devices like Ubnt which annouce IEEE802.11 support

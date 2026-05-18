@@ -36,24 +36,23 @@ sub _getVirtualMachines {
 
     my @machines;
 
-    # Determine once whether GLPI supports extended VM fields:
-    #   0 = basic inventory only
-    #   1 = GLPI >= 10.0.25: IPADDRESS and OPERATINGSYSTEM supported
-    #   2 = GLPI >= 12: DRIVES also supported (pending inventory_format PR)
-    my $extended = 0;
-    if ($inventory) {
-        $extended = $inventory->supportsGlpiVersion('12')     ? 2 :
-                    $inventory->supportsGlpiVersion('10.0.25') ? 1 : 0;
+    # Get host FQDN via WMI with fallback
+    my $hostname;
+    my @sysinfo = GLPI::Agent::Tools::Win32::getWMIObjects(
+        class      => 'Win32_ComputerSystem',
+        properties => [ qw/DNSHostName Domain PartOfDomain/ ]
+    );
+    if (@sysinfo) {
+        my $obj = $sysinfo[0];
+        if ($obj->{PartOfDomain} && $obj->{Domain}) {
+            $hostname = $obj->{DNSHostName} . '.' . $obj->{Domain};
+        } else {
+            $hostname = $obj->{DNSHostName};
+        }
     }
-    if ($extended >= 2) {
-        $logger->debug("Hyper-V: GLPI supports extended VM fields (DRIVES, IPADDRESS, OPERATINGSYSTEM)")
-            if $logger;
-    } elsif ($extended == 1) {
-        $logger->debug("Hyper-V: GLPI supports extended VM fields (IPADDRESS, OPERATINGSYSTEM)")
-            if $logger;
-    } else {
-        $logger->debug("Hyper-V: GLPI version does not support extended VM fields (requires 10.0.25+), collecting basic inventory only")
-            if $logger;
+    if (!$hostname) {
+        require Sys::Hostname;
+        $hostname = Sys::Hostname::hostname();
     }
 
     # index memory, cpu and BIOS UUID information
@@ -260,6 +259,39 @@ sub _getVirtualMachines {
         }
     }
 
+    # Index VHD sizes by file path using PowerShell Get-VHD
+    # Size is in bytes, convert to MB
+    my %vhd_size;
+    my $script = 'Get-VM | Get-VMHardDiskDrive | ForEach-Object { Get-VHD $_.Path } | Select-Object Path, Size | ForEach-Object { Write-Output ($_.Path + "|" + $_.Size) }';
+    for my $line (GLPI::Agent::Tools::Win32::runPowerShell(script => $script)) {
+        next unless $line =~ /^(.+)\|(\d+)$/;
+        my ($path, $size) = ($1, $2);
+        $vhd_size{lc($path)} = int($size / 1024 / 1024);
+    }
+
+    my %drives;
+    foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
+        moniker    => 'winmgmts://./root/virtualization/v2',
+        altmoniker => 'winmgmts://./root/virtualization',
+        class      => 'MSVM_StorageAllocationSettingData',
+        properties => [ qw/InstanceID HostResource ResourceType/ ]
+    )) {
+        next unless defined $object->{ResourceType} && $object->{ResourceType} == 31;
+        next unless $object->{HostResource};
+        my $id = $object->{InstanceID} // '';
+        next unless $id =~ /^Microsoft:([^\\]+)/;
+        my $vm_guid = $1;
+        my $path = ref($object->{HostResource}) eq 'ARRAY'
+                     ? $object->{HostResource}[0]
+                     : $object->{HostResource};
+        my $name = (split /[\\\/]/, $path)[-1];
+        push @{$drives{$vm_guid}}, {
+            VOLUMN => $path,
+            TOTAL  => $vhd_size{lc($path)} // 0,
+            LABEL  => $name,
+        };
+    }
+
     foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
         moniker    => 'winmgmts://./root/virtualization/v2',
         altmoniker => 'winmgmts://./root/virtualization',
@@ -295,6 +327,8 @@ sub _getVirtualMachines {
             UUID      => $biosguid{$object->{Name}},
             MEMORY    => $memory{$object->{Name}},
             VCPU      => $vcpu{$object->{Name}},
+            DRIVES    => $drives{$object->{Name}} // [],
+            HOSTNAME  => $hostname,
         };
         $machine->{SERIAL} = $serial{$object->{Name}} if $serial{$object->{Name}};
         $machine->{MAC}    = $mac{$object->{Name}}    if $mac{$object->{Name}};

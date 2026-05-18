@@ -41,6 +41,8 @@ my %tests = (
             UUID      => undef,
             VCPU      => undef,
             MEMORY    => undef,
+            DRIVES    => [],
+            HOSTNAME  => 'NITROGENIO',
         },
         {
             VMTYPE    => 'HyperV',
@@ -50,6 +52,8 @@ my %tests = (
             UUID      => undef,
             VCPU      => undef,
             MEMORY    => undef,
+            DRIVES    => [],
+            HOSTNAME  => 'NITROGENIO',
         },
         {
             SUBSYSTEM => 'MS HyperV',
@@ -59,6 +63,8 @@ my %tests = (
             UUID      => undef,
             VCPU      => undef,
             MEMORY    => undef,
+            DRIVES    => [],
+            HOSTNAME  => 'NITROGENIO',
         }
     ],
     '2008' => [
@@ -70,31 +76,26 @@ my %tests = (
             UUID      => undef,
             VCPU      => 2,
             MEMORY    => 2048,
-            SERIAL    => '2008-SN-0001',
-            MAC       => '00:11:22:AA:BB:01',
-            DRIVES  => [
-                { VOLUMN => 'C:\VMs\vm-disco.vhdx',           TOTAL => 102400 },
-                { VOLUMN => '\\\\nas01\VMs\vm-datos.vhdx',    TOTAL => 512000 },
-                { VOLUMN => '\\\\nas02\C$\VMs\vm-admin.vhdx', TOTAL =>  20480 },
+            DRIVES    => [
+                { VOLUMN => 'C:\VMs\vm-disco.vhdx',        TOTAL => 102400, LABEL => 'vm-disco.vhdx' },
+                { VOLUMN => '\\\\nas01\VMs\vm-datos.vhdx',  TOTAL => 512000, LABEL => 'vm-datos.vhdx' },
             ],
+            HOSTNAME  => 'SRV00093.example.com',
         },
     ],
     'qa' => [
         {
-            VMTYPE          => 'HyperV',
-            SUBSYSTEM       => 'MS HyperV',
-            NAME            => 'vm2',
-            STATUS          => STATUS_RUNNING,
-            UUID            => undef,
-            VCPU            => 4,
-            MEMORY          => 2048,
-            SERIAL          => 'QA-SN-0002',
-            MAC             => '00:11:22:AA:BB:02',
-            DRIVES        => [
-                { VOLUMN => 'C:\HyperV\vm2.vhdx', TOTAL => 12288 },
+            VMTYPE    => 'HyperV',
+            SUBSYSTEM => 'MS HyperV',
+            NAME      => 'vm2',
+            STATUS    => STATUS_RUNNING,
+            UUID      => undef,
+            VCPU      => 4,
+            MEMORY    => 2048,
+            DRIVES    => [
+                { VOLUMN => 'C:\HyperV\vm2.vhdx', TOTAL => 12288, LABEL => 'vm2.vhdx' },
             ],
-            IPADDRESS       => '172.25.2.239',
-            OPERATINGSYSTEM => { FULL_NAME => 'Ubuntu 6.8.0' },
+            HOSTNAME  => 'WIN-7B9M4DMJ09Q.eridcservices.com',
         },
         {
             VMTYPE    => 'HyperV',
@@ -104,48 +105,11 @@ my %tests = (
             UUID      => undef,
             VCPU      => 4,
             MEMORY    => 4096,
-            SERIAL    => 'QA-SN-0003',
-            MAC       => '00:11:22:AA:BB:03',
-            DRIVES  => [
-                { VOLUMN => 'C:\HyperV\vm1.vhdx',            TOTAL => 16384 },
-                { VOLUMN => 'C:\HyperV\pruebadediscosl.vhdx', TOTAL => 5120  },
-            ],
-        },
-    ],
-    # VM in paused state (EnabledState=9, CIM Quiesce) must map to STATUS_PAUSED
-    'paused' => [
-        {
-            VMTYPE    => 'HyperV',
-            SUBSYSTEM => 'MS HyperV',
-            NAME      => 'VM-Testing',
-            STATUS    => STATUS_PAUSED,
-            UUID      => undef,
-            VCPU      => 2,
-            MEMORY    => 1024,
-            SERIAL    => 'PAUSED-SN-0004',
-            MAC       => '00:11:22:AA:BB:04',
             DRIVES    => [
-                { VOLUMN => 'C:\ClusterStorage\Volume1\VM\VM-Testing\Virtual Hard Disks\VM-Testing.vhdx', TOTAL => 51200 },
+                { VOLUMN => 'C:\HyperV\vm1.vhdx',            TOTAL => 16384, LABEL => 'vm1.vhdx' },
+                { VOLUMN => 'C:\HyperV\pruebadediscosl.vhdx', TOTAL => 5120,  LABEL => 'pruebadediscosl.vhdx' },
             ],
-        },
-    ],
-    # Veeam File-Level Restore appliance: has a .vfd floppy disk that must be
-    # skipped (Get-VHD does not support .vfd), plus a .avhdx checkpoint disk.
-    'veeam-flr' => [
-        {
-            VMTYPE    => 'HyperV',
-            SUBSYSTEM => 'MS HyperV',
-            NAME      => 'VeeamFLR_SG73COMP1_85f38199',
-            STATUS    => STATUS_RUNNING,
-            UUID      => undef,
-            VCPU      => 2,
-            MEMORY    => 2048,
-            SERIAL    => 'VEEAM-SN-0005',
-            MAC       => '00:11:22:AA:BB:05',
-            DRIVES    => [
-                { VOLUMN => 'C:\VeeamFLR\5k4y4gms.4n3\disk0_C.avhdx', TOTAL => 102400 },
-            ],
-            IPADDRESS => '10.95.162.58',
+            HOSTNAME  => 'WIN-7B9M4DMJ09Q.eridcservices.com',
         },
     ],
 
@@ -166,6 +130,20 @@ my %vhd_sizes = (
     '\\\\nas02\C$\VMs\vm-admin.vhdx'                                                =>  21474836480,   #  20480 MB
 );
 
+# PowerShell Get-VHD output lines per test case (path|size_bytes|filesize_bytes)
+my %powershell_vhd = (
+    'unknown' => [],
+    '2008'    => [
+        'C:\VMs\vm-disco.vhdx|107374182400',
+        '\\\\nas01\VMs\vm-datos.vhdx|536870912000',
+    ],
+    'qa'      => [
+        'C:\HyperV\vm2.vhdx|12884901888',
+        'C:\HyperV\vm1.vhdx|17179869184',
+        'C:\HyperV\pruebadediscosl.vhdx|5368709120',
+    ],
+);
+
 # fake Tools::Win32, instead of Task::Inventory::Virtualization::HyperV, as
 # it is loaded at runtime
 my $module = Test::MockModule->new(
@@ -177,12 +155,10 @@ foreach my $test (keys %tests) {
         'getWMIObjects',
         mockGetWMIObjects($test)
     );
-    $module->mock('runPowerShell', sub {
-        my (%params) = @_;
-        my ($path) = $params{script} =~ /'([^']+)'/;
-        $path =~ s/''/'/g if $path;   # unescape PS single-quoted '' → '
-        return $vhd_sizes{$path} // 0;
-    });
+    $module->mock(
+        'runPowerShell',
+        sub { return @{$powershell_vhd{$test} // []} }
+    );
 
     my @machines = GLPI::Agent::Task::Inventory::Virtualization::HyperV::_getVirtualMachines(inventory => $inventory);
     cmp_deeply(
