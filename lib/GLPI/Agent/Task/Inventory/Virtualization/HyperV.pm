@@ -301,7 +301,10 @@ sub _getVirtualMachines {
             UUID      => $biosguid{$object->{Name}},
             MEMORY    => $memory{$object->{Name}},
             VCPU      => $vcpu{$object->{Name}},
-            STORAGES  => $storages{$object->{Name}} // [],
+            ($inventory && $inventory->supportsGlpiVersion('10.0.25')
+                ? (STORAGES => $storages{$object->{Name}} // [])
+                : ()
+            ),
         };
         $machine->{SERIAL} = $serial{$object->{Name}} if $serial{$object->{Name}};
         $machine->{MAC}    = $mac{$object->{Name}}    if $mac{$object->{Name}};
