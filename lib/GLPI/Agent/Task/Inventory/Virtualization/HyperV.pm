@@ -240,7 +240,7 @@ sub _getVirtualMachines {
         }
     }
 
-    my %drives;
+    my %storages;
     foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
         moniker    => 'winmgmts://./root/virtualization/v2',
         altmoniker => 'winmgmts://./root/virtualization',
@@ -260,7 +260,7 @@ sub _getVirtualMachines {
             $units eq 'byte * 2^20' ? $object->{VirtualQuantity} :
             $units eq 'byte'        ? int($object->{VirtualQuantity} / 1024 / 1024) :
                                       $object->{VirtualQuantity} // 0;
-        push @{$drives{$vm_guid}}, {
+        push @{$storages{$vm_guid}}, {
             VOLUMN => $path,
             TOTAL  => $size_mb,
         };
@@ -301,7 +301,7 @@ sub _getVirtualMachines {
             UUID      => $biosguid{$object->{Name}},
             MEMORY    => $memory{$object->{Name}},
             VCPU      => $vcpu{$object->{Name}},
-            DRIVES    => $drives{$object->{Name}} // [],
+            STORAGES  => $storages{$object->{Name}} // [],
         };
         $machine->{SERIAL} = $serial{$object->{Name}} if $serial{$object->{Name}};
         $machine->{MAC}    = $mac{$object->{Name}}    if $mac{$object->{Name}};
