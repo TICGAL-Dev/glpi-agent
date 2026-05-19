@@ -36,25 +36,6 @@ sub _getVirtualMachines {
 
     my @machines;
 
-    # Get host FQDN via WMI with fallback
-    my $hostname;
-    my @sysinfo = GLPI::Agent::Tools::Win32::getWMIObjects(
-        class      => 'Win32_ComputerSystem',
-        properties => [ qw/DNSHostName Domain PartOfDomain/ ]
-    );
-    if (@sysinfo) {
-        my $obj = $sysinfo[0];
-        if ($obj->{PartOfDomain} && $obj->{Domain}) {
-            $hostname = $obj->{DNSHostName} . '.' . $obj->{Domain};
-        } else {
-            $hostname = $obj->{DNSHostName};
-        }
-    }
-    if (!$hostname) {
-        require Sys::Hostname;
-        $hostname = Sys::Hostname::hostname();
-    }
-
     # index memory, cpu and BIOS UUID information
     my %memory;
     foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
@@ -328,7 +309,6 @@ sub _getVirtualMachines {
             MEMORY    => $memory{$object->{Name}},
             VCPU      => $vcpu{$object->{Name}},
             DRIVES    => $drives{$object->{Name}} // [],
-            HOSTNAME  => $hostname,
         };
         $machine->{SERIAL} = $serial{$object->{Name}} if $serial{$object->{Name}};
         $machine->{MAC}    = $mac{$object->{Name}}    if $mac{$object->{Name}};
