@@ -121,10 +121,6 @@ my %checks = (
         }
     },
     VIRTUALMACHINES => {
-        DRIVES => {
-            not_before  => glpiVersion('12'),
-            as_ref      => 'DRIVES',
-        },
         IPADDRESS => {
             not_before  => glpiVersion('10.0.17'),
         },
