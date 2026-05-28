@@ -37,10 +37,20 @@ sub _getVirtualMachines {
 
     my @machines;
 
-    # Determine once whether GLPI supports extended VM fields
-    my $extended = $inventory && $inventory->supportsGlpiVersion('10.0.25');
-    if ($extended) {
+    # Determine once whether GLPI supports extended VM fields:
+    #   0 = basic inventory only
+    #   1 = GLPI >= 10.0.25: IPADDRESS and OPERATINGSYSTEM supported
+    #   2 = GLPI >= 12: DRIVES also supported (pending inventory_format PR)
+    my $extended = 0;
+    if ($inventory) {
+        $extended = $inventory->supportsGlpiVersion('12')     ? 2 :
+                    $inventory->supportsGlpiVersion('10.0.25') ? 1 : 0;
+    }
+    if ($extended >= 2) {
         $logger->debug("Hyper-V: GLPI supports extended VM fields (DRIVES, IPADDRESS, OPERATINGSYSTEM)")
+            if $logger;
+    } elsif ($extended == 1) {
+        $logger->debug("Hyper-V: GLPI supports extended VM fields (IPADDRESS, OPERATINGSYSTEM)")
             if $logger;
     } else {
         $logger->debug("Hyper-V: GLPI version does not support extended VM fields (requires 10.0.25+), collecting basic inventory only")
@@ -253,7 +263,7 @@ sub _getVirtualMachines {
 
     my %drives;
     my %kvp;
-    if ($extended) {
+    if ($extended > 1) {
         foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
             moniker    => 'winmgmts://./root/virtualization/v2',
             altmoniker => 'winmgmts://./root/virtualization',
@@ -271,7 +281,7 @@ sub _getVirtualMachines {
 
             # Skip ISO images — Get-VHD does not support them
             if ($path =~ /\.iso$/i) {
-                $logger->debug("Hyper-V: skipping ISO image '$path'")
+                $logger->debug2("Hyper-V: skipping ISO image '$path'")
                     if $logger;
                 next;
             }
@@ -298,7 +308,8 @@ sub _getVirtualMachines {
                 TOTAL  => $size_mb,
             };
         }
-
+    }
+    if ($extended) {
         foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
             moniker    => 'winmgmts://./root/virtualization/v2',
             altmoniker => 'winmgmts://./root/virtualization',
@@ -398,35 +409,6 @@ sub _getVirtualMachines {
                     if $logger;
             }
         }
-
-<<<<<<< HEAD
-=======
-        if ($extended) {
-            $machine->{DRIVES} = $drives{$object->{Name}} // [];
-            my $vm_kvp = $kvp{$object->{Name}};
-            if ($vm_kvp) {
-                $machine->{IPADDRESS} = $vm_kvp->{IPADDRESS}
-                    if defined $vm_kvp->{IPADDRESS};
-                if ($vm_kvp->{OSName} || $vm_kvp->{OSVersion}) {
-                    my $full_name = join(' ',
-                        grep { defined $_ && length $_ }
-                        $vm_kvp->{OSName}, $vm_kvp->{OSVersion}
-                    );
-                    $machine->{OPERATINGSYSTEM} = { FULL_NAME => $full_name }
-                        if $full_name;
-                }
-                $logger->debug2(
-                    "Hyper-V: VM '$machine->{NAME}' KVP data: " .
-                    "ip=" . ($machine->{IPADDRESS} // 'N/A') . ", " .
-                    "os=" . ($machine->{OPERATINGSYSTEM}{FULL_NAME} // 'N/A')
-                ) if $logger;
-            } else {
-                $logger->debug2("Hyper-V: VM '$machine->{NAME}': no KVP guest data (Integration Services may not be installed)")
-                    if $logger;
-            }
-        }
-
->>>>>>> c1c551e93 (inventory: rename STORAGES to DRIVES in Hyper-V VM data)
         push @machines, $machine;
     }
 
