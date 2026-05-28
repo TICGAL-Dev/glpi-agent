@@ -10,7 +10,7 @@ inventory:
 * fix #1158: Fix possible use of uninitialized warning during monitor inventory
 * fix #1159: Fix possible use of uninitialized value in hash element warning during
   windows software inventory
-* Add STORAGES support for Hyper-V VMs: collect virtual hard disk paths and
+* Add DRIVES support for Hyper-V VMs: collect virtual hard disk paths and
   provisioned sizes via MSVM_StorageAllocationSettingData WMI class
 
 toolbox:
