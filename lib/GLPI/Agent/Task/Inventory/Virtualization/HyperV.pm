@@ -97,7 +97,7 @@ sub _getVirtualMachines {
 
     my %drives;
     my %kvp;
-    if ($extended > 1) {
+    if ($extended >= 1) {
         foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
             moniker    => 'winmgmts://./root/virtualization/v2',
             altmoniker => 'winmgmts://./root/virtualization',
@@ -214,7 +214,7 @@ sub _getVirtualMachines {
             VCPU      => $vcpu{$object->{Name}},
         };
 
-        if ($extended > 1) {
+        if ($extended >= 1) {
             $machine->{DRIVES} = $drives{$object->{Name}} // [];
         }
         if ($extended) {
