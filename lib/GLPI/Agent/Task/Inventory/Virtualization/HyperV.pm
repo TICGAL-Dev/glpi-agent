@@ -36,20 +36,10 @@ sub _getVirtualMachines {
 
     my @machines;
 
-    # Determine once whether GLPI supports extended VM fields:
-    #   0 = basic inventory only
-    #   1 = GLPI >= 10.0.25: IPADDRESS and OPERATINGSYSTEM supported
-    #   2 = GLPI >= 12: DRIVES also supported (pending inventory_format PR)
-    my $extended = 0;
-    if ($inventory) {
-        $extended = $inventory->supportsGlpiVersion('12')     ? 2 :
-                    $inventory->supportsGlpiVersion('10.0.25') ? 1 : 0;
-    }
-    if ($extended >= 2) {
+    # Determine once whether GLPI supports extended VM fields (DRIVES, IPADDRESS, OPERATINGSYSTEM)
+    my $extended = $inventory && $inventory->supportsGlpiVersion('10.0.25');
+    if ($extended) {
         $logger->debug("Hyper-V: GLPI supports extended VM fields (DRIVES, IPADDRESS, OPERATINGSYSTEM)")
-            if $logger;
-    } elsif ($extended == 1) {
-        $logger->debug("Hyper-V: GLPI supports extended VM fields (IPADDRESS, OPERATINGSYSTEM)")
             if $logger;
     } else {
         $logger->debug("Hyper-V: GLPI version does not support extended VM fields (requires 10.0.25+), collecting basic inventory only")
@@ -262,7 +252,7 @@ sub _getVirtualMachines {
 
     my %drives;
     my %kvp;
-    if ($extended > 1) {
+    if ($extended) {
         foreach my $object (GLPI::Agent::Tools::Win32::getWMIObjects(
             moniker    => 'winmgmts://./root/virtualization/v2',
             altmoniker => 'winmgmts://./root/virtualization',
@@ -412,8 +402,8 @@ sub _getVirtualMachines {
         $machine->{SERIAL} = $serial{$object->{Name}} if $serial{$object->{Name}};
         $machine->{MAC}    = $mac{$object->{Name}}    if $mac{$object->{Name}};
 
-        if ($extended > 1 && $drives{$object->{Name}} && @{$drives{$object->{Name}}}) {
-            $machine->{DRIVES} = $drives{$object->{Name}};
+        if ($extended) {
+            $machine->{DRIVES} = $drives{$object->{Name}} // [];
         }
         if ($extended) {
             my $vm_kvp = $kvp{$object->{Name}};
