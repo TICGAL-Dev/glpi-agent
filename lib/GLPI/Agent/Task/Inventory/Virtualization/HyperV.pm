@@ -271,9 +271,9 @@ sub _getVirtualMachines {
             # Decoding ensures non-ASCII characters in any locale serialize correctly to JSON.
             utf8::decode($path) if $path && !utf8::is_utf8($path);
 
-            # Skip ISO images — Get-VHD does not support them
-            if ($path =~ /\.iso$/i) {
-                $logger->debug2("Hyper-V: skipping ISO image '$path'")
+            # Skip file types unsupported by Get-VHD (ISOs, virtual floppy disks)
+            if ($path =~ /\.(?:iso|vfd)$/i) {
+                $logger->debug2("Hyper-V: skipping unsupported file type '$path'")
                     if $logger;
                 next;
             }

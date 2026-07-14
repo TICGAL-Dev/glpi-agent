@@ -108,6 +108,23 @@ my %tests = (
             ],
         },
     ],
+    # Veeam File-Level Restore appliance: has a .vfd floppy disk that must be
+    # skipped (Get-VHD does not support .vfd), plus a .avhdx checkpoint disk.
+    'veeam-flr' => [
+        {
+            VMTYPE    => 'HyperV',
+            SUBSYSTEM => 'MS HyperV',
+            NAME      => 'VeeamFLR_SG73COMP1_85f38199',
+            STATUS    => STATUS_RUNNING,
+            UUID      => undef,
+            VCPU      => 2,
+            MEMORY    => 2048,
+            DRIVES    => [
+                { VOLUMN => 'C:\VeeamFLR\5k4y4gms.4n3\disk0_C.avhdx', TOTAL => 102400 },
+            ],
+            IPADDRESS => '10.95.162.58',
+        },
+    ],
 
 );
 
