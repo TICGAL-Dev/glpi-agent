@@ -308,14 +308,16 @@ sub _getVirtualMachines {
             class      => 'Msvm_KvpExchangeComponent',
             properties => [ qw/SystemName GuestIntrinsicExchangeItems/ ]
         )) {
-            my $vm_guid = $object->{SystemName} // next;
-            my $items   = $object->{GuestIntrinsicExchangeItems} // next;
+            my $vm_guid = $object->{SystemName}
+                or next;
+            my $items   = $object->{GuestIntrinsicExchangeItems}
+                or next;
             $items = [$items] unless ref($items) eq 'ARRAY';
             foreach my $xml (@$items) {
                 $xml =~ s/&quot;/"/g;
                 my ($name) = $xml =~ m{<PROPERTY NAME="Name"[^>]*><VALUE>([^<]*)</VALUE>};
                 my ($data) = $xml =~ m{<PROPERTY NAME="Data"[^>]*><VALUE>([^<]*)</VALUE>};
-                next unless defined $name && defined $data && length($data);
+                next if empty($name) || empty($data);
                 if ($name eq 'NetworkAddressIPv4') {
                     my ($ip) = split(/;/, $data);
                     if ($ip && $ip =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
@@ -350,8 +352,10 @@ sub _getVirtualMachines {
                 class      => 'Msvm_GuestNetworkAdapterConfiguration',
                 properties => [ qw/InstanceID IPAddresses/ ]
             )) {
-                my $instance_id = $object->{InstanceID} // next;
-                my $ips         = $object->{IPAddresses} // next;
+                my $instance_id = $object->{InstanceID}
+                    or next;
+                my $ips         = $object->{IPAddresses}
+                    or next;
                 my ($vm_guid)   = $instance_id =~ m{GuestNetwork\\([^\\]+)}i;
                 next unless $vm_guid;
                 next if defined $kvp{$vm_guid}{IPADDRESS};
