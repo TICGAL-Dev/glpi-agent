@@ -30,3 +30,4 @@ release-description.md
 .pc
 build/
 appimage-builder-cache/
+.claude/

@@ -75,8 +75,9 @@ my %tests = (
                 { DESCRIPTION => 'Network Adapter', MACADDR => '00:11:22:aa:bb:01' },
             ],
             DRIVES  => [
-                { VOLUMN => 'C:\VMs\vm-disco.vhdx',        TOTAL => 102400 },
-                { VOLUMN => '\\\\nas01\VMs\vm-datos.vhdx',  TOTAL => 512000 },
+                { VOLUMN => 'C:\VMs\vm-disco.vhdx',            TOTAL => 102400 },
+                { VOLUMN => '\\\\nas01\VMs\vm-datos.vhdx',      TOTAL => 512000 },
+                { VOLUMN => '\\\\nas02\C$\VMs\vm-admin.vhdx',   TOTAL =>  20480 },
             ],
         },
     ],
